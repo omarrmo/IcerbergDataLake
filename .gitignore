@@ -1,5 +1,13 @@
 .env
 
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+
 # macOS Finder files
 .DS_Store
 **/.DS_Store
