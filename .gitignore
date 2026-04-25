@@ -1,1 +1,5 @@
 .env
+
+# macOS Finder files
+.DS_Store
+**/.DS_Store
