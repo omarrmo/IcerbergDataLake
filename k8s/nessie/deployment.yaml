@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nessie
+  namespace: mlops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nessie
+  template:
+    metadata:
+      labels:
+        app: nessie
+    spec:
+      containers:
+        - name: nessie
+          image: ghcr.io/projectnessie/nessie:latest
+          env:
+            - name: QUARKUS_DATASOURCE_JDBC_URL
+              value: jdbc:postgresql://postgresql:5432/nessie
+            - name: QUARKUS_DATASOURCE_USERNAME
+              value: nessie
+            - name: QUARKUS_DATASOURCE_PASSWORD
+              value: nessie
+          ports:
+            - containerPort: 19120
