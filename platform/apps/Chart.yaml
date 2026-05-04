@@ -1,0 +1,6 @@
+apiVersion: v2
+name: platform-apps
+description: App-of-apps Helm chart that produces one Argo CD Application per platform component.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

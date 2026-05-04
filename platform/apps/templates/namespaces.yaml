@@ -1,0 +1,22 @@
+{{- if .Values.enabled.namespaces }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: namespaces
+  {{- include "platformApps.appMetadata" . | nindent 2 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  project: {{ .Values.project }}
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: platform
+    directory:
+      recurse: false
+      include: "namespaces.yaml"
+  destination:
+    server: {{ .Values.destinationServer }}
+    namespace: default
+  {{- include "platformApps.syncPolicy" . | nindent 2 }}
+{{- end }}

@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: mlops
+
+# Argo CD syncs ONLY the ConfigMap from this overlay. The accompanying
+# sparkapplication.yaml is a *template* that Airflow's SparkKubernetesOperator
+# applies on demand — keeping it out of Argo's sync prevents the controller
+# from fighting Airflow over ownership.
+
+configMapGenerator:
+  - name: iceberg-demo-app
+    files:
+      - iceberg_demo.py
+
+generatorOptions:
+  disableNameSuffixHash: true

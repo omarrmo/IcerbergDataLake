@@ -1,0 +1,36 @@
+{{- if .Values.enabled.monitoring }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  {{- include "platformApps.appMetadata" . | nindent 2 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: {{ .Values.project }}
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: {{ .Values.versions.kubePrometheusStack }}
+      helm:
+        valueFiles:
+          - $values/platform/monitoring/values.yaml
+        parameters:
+          - name: grafana.ingress.hosts[0]
+            value: grafana.{{ .Values.ingressDomain }}
+    - repoURL: {{ .Values.repoURL }}
+      targetRevision: {{ .Values.targetRevision }}
+      ref: values
+  destination:
+    server: {{ .Values.destinationServer }}
+    namespace: {{ .Values.namespaces.monitoring }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      # CRDs in this chart are large; skip Replace for unchanged resources.
+      - ApplyOutOfSyncOnly=true
+{{- end }}

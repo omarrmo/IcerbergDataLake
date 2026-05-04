@@ -1,0 +1,28 @@
+{{- if .Values.enabled.trino }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trino
+  {{- include "platformApps.appMetadata" . | nindent 2 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  project: {{ .Values.project }}
+  sources:
+    - repoURL: https://trinodb.github.io/charts
+      chart: trino
+      targetRevision: {{ .Values.versions.trino }}
+      helm:
+        valueFiles:
+          - $values/platform/trino/values.yaml
+        parameters:
+          - name: ingress.host
+            value: trino.{{ .Values.ingressDomain }}
+    - repoURL: {{ .Values.repoURL }}
+      targetRevision: {{ .Values.targetRevision }}
+      ref: values
+  destination:
+    server: {{ .Values.destinationServer }}
+    namespace: {{ .Values.namespaces.platform }}
+  {{- include "platformApps.syncPolicy" . | nindent 2 }}
+{{- end }}

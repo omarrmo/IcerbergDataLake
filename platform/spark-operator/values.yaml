@@ -1,0 +1,47 @@
+# Kubeflow Spark Operator chart values.
+# https://github.com/kubeflow/spark-operator/tree/master/charts/spark-operator-chart
+controller:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  serviceAccount:
+    create: true
+
+webhook:
+  enable: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# Operator only watches our platform namespace.
+spark:
+  jobNamespaces:
+    - mlops
+  serviceAccount:
+    create: false
+    # We provide our own (platform/rbac/spark-driver.yaml) - the operator
+    # otherwise creates one called "spark" with default name.
+    name: spark-driver
+
+# Prometheus scraping
+prometheus:
+  metrics:
+    enable: true
+    port: 8080
+    portName: metrics
+    endpoint: /metrics
+  podMonitor:
+    enable: true
+    podMetricsEndpoint:
+      interval: 30s
+    labels:
+      release: kube-prometheus-stack

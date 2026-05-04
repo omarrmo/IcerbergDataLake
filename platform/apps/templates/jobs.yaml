@@ -1,0 +1,20 @@
+{{- if .Values.enabled.jobs }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jobs
+  {{- include "platformApps.appMetadata" . | nindent 2 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+spec:
+  project: {{ .Values.project }}
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: jobs
+    # Kustomize source — jobs/kustomization.yaml + per-job overlays.
+  destination:
+    server: {{ .Values.destinationServer }}
+    namespace: {{ .Values.namespaces.platform }}
+  {{- include "platformApps.syncPolicy" . | nindent 2 }}
+{{- end }}

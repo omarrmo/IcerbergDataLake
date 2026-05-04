@@ -1,0 +1,21 @@
+{{- if .Values.enabled.rbac }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbac
+  {{- include "platformApps.appMetadata" . | nindent 2 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  project: {{ .Values.project }}
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: platform/rbac
+    directory:
+      recurse: true
+  destination:
+    server: {{ .Values.destinationServer }}
+    namespace: {{ .Values.namespaces.platform }}
+  {{- include "platformApps.syncPolicy" . | nindent 2 }}
+{{- end }}

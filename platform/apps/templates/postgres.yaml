@@ -1,0 +1,25 @@
+{{- if .Values.enabled.postgres }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgres
+  {{- include "platformApps.appMetadata" . | nindent 2 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: {{ .Values.project }}
+  sources:
+    - repoURL: registry-1.docker.io/bitnamicharts
+      chart: postgresql
+      targetRevision: {{ .Values.versions.postgres }}
+      helm:
+        valueFiles:
+          - $values/platform/postgres/values.yaml
+    - repoURL: {{ .Values.repoURL }}
+      targetRevision: {{ .Values.targetRevision }}
+      ref: values
+  destination:
+    server: {{ .Values.destinationServer }}
+    namespace: {{ .Values.namespaces.platform }}
+  {{- include "platformApps.syncPolicy" . | nindent 2 }}
+{{- end }}

@@ -1,0 +1,36 @@
+# Single source of truth for app-of-apps. Override repoURL/targetRevision per
+# environment when applying the root Application (the bootstrap script does this).
+
+repoURL: https://github.com/CHANGEME/IcerbergDataLake.git
+targetRevision: main
+
+# Argo CD project + destination cluster
+project: default
+destinationServer: https://kubernetes.default.svc
+
+namespaces:
+  platform: mlops
+  monitoring: monitoring
+
+ingressDomain: localtest.me
+
+# Helm chart versions for each external dependency. Pinned for reproducibility.
+versions:
+  postgres: "16.2.2"          # bitnami/postgresql
+  nessie: "0.107.5"           # nessie chart
+  sparkOperator: "2.5.0"      # kubeflow spark-operator
+  airflow: "1.15.0"           # apache/airflow chart
+  trino: "1.36.0"             # trinodb/trino chart
+  kubePrometheusStack: "65.5.0"
+
+# Toggle individual components for debugging.
+enabled:
+  namespaces: true
+  rbac: true
+  postgres: true
+  nessie: true
+  sparkOperator: true
+  airflow: true
+  trino: true
+  monitoring: true
+  jobs: true

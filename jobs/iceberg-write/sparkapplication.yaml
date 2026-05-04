@@ -1,0 +1,90 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: iceberg-write-demo
+  namespace: mlops
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  sparkVersion: "3.5.6"
+  # Custom image built by images/spark/build.sh and kind-loaded. Drop in to
+  # avoid runtime Maven resolution (no spec.deps.packages).
+  image: iceberg-spark:3.5.6
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///opt/spark/app/iceberg_demo.py
+  restartPolicy:
+    type: Never
+
+  sparkConf:
+    # Iceberg session extensions (DDL, time travel, MERGE, etc.)
+    spark.sql.extensions: org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+
+    # Catalog "nessie" -> Iceberg + Nessie REST + S3FileIO. Note: we use
+    # Iceberg's own S3FileIO (not Hadoop S3A) and the s3:// scheme that goes
+    # with it, which uses the iceberg-aws-bundle baked into the image.
+    spark.sql.catalog.nessie: org.apache.iceberg.spark.SparkCatalog
+    spark.sql.catalog.nessie.catalog-impl: org.apache.iceberg.nessie.NessieCatalog
+    spark.sql.catalog.nessie.io-impl: org.apache.iceberg.aws.s3.S3FileIO
+    spark.sql.catalog.nessie.uri: http://nessie.mlops.svc.cluster.local:19120/api/v2
+    spark.sql.catalog.nessie.ref: main
+    spark.sql.catalog.nessie.authentication.type: NONE
+    spark.sql.catalog.nessie.warehouse: s3://omarrmo-iceberg-datalake-bucket-396510133177-eu-central-1-an/warehouse
+    spark.sql.catalog.nessie.s3.region: eu-central-1
+    spark.sql.catalog.nessie.client.region: eu-central-1
+
+    # Default catalog so plain table names resolve into Nessie
+    spark.sql.defaultCatalog: nessie
+
+    # Belt-and-braces: keep Ivy off /nonexistent in case any code path still
+    # touches it (no packages are downloaded at submit time).
+    spark.jars.ivy: /tmp/.ivy2
+
+  driver:
+    cores: 1
+    memory: 1g
+    serviceAccount: spark-driver
+    env:
+      - name: HOME
+        value: /tmp
+    envFrom:
+      - secretRef:
+          name: aws-creds
+    volumeMounts:
+      - name: app
+        mountPath: /opt/spark/app
+      - name: tmp
+        mountPath: /tmp
+
+  executor:
+    instances: 2
+    cores: 1
+    memory: 1g
+    env:
+      - name: HOME
+        value: /tmp
+    envFrom:
+      - secretRef:
+          name: aws-creds
+    volumeMounts:
+      - name: app
+        mountPath: /opt/spark/app
+      - name: tmp
+        mountPath: /tmp
+
+  volumes:
+    - name: app
+      configMap:
+        name: iceberg-demo-app
+        items:
+          - key: iceberg_demo.py
+            path: iceberg_demo.py
+    - name: tmp
+      emptyDir: {}
+
+  monitoring:
+    exposeDriverMetrics: true
+    exposeExecutorMetrics: true
+    prometheus:
+      jmxExporterJar: /opt/spark/jars/jmx_prometheus_javaagent.jar
+      port: 8090

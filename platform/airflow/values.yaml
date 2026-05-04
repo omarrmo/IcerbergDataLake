@@ -1,0 +1,124 @@
+# Apache Airflow Helm chart values.
+# https://github.com/apache/airflow/tree/main/chart
+#
+# DAGs are loaded via git-sync from this repo's dags/ folder. Workers run with
+# RBAC granted by platform/rbac/airflow-spark.yaml so the SparkKubernetesOperator
+# can create SparkApplication CRs in the mlops namespace.
+
+executor: KubernetesExecutor
+
+# Airflow image — bundles cncf.kubernetes provider (SparkKubernetesOperator)
+images:
+  airflow:
+    repository: apache/airflow
+    tag: 2.10.3-python3.11
+    pullPolicy: IfNotPresent
+
+# Disable the chart's internal Postgres in favour of the Bitnami release used
+# by Nessie? No - keep them isolated. Airflow gets its own embedded Postgres.
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      size: 5Gi
+
+redis:
+  enabled: false
+
+# Webserver auth: simple-auth-manager with hardcoded admin/admin for local only.
+# Override in real environments.
+webserver:
+  defaultUser:
+    enabled: true
+    role: Admin
+    username: admin
+    email: admin@localhost
+    firstName: admin
+    lastName: admin
+    password: admin
+  service:
+    type: ClusterIP
+
+ingress:
+  web:
+    enabled: true
+    ingressClassName: nginx
+    host: airflow.localtest.me
+    path: /
+    pathType: Prefix
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+
+config:
+  core:
+    dags_are_paused_at_creation: "False"
+    load_examples: "False"
+  webserver:
+    expose_config: "True"
+
+# Git-sync sidecar mounts the repo at /opt/airflow/dags/repo. Subpath narrows
+# Airflow to dags/ and jobs/ (jobs/ holds SparkApplication YAMLs the DAG submits).
+dags:
+  gitSync:
+    enabled: true
+    # repo + branch are injected by the parent Argo Application's helm parameters
+    # (platform/apps/templates/airflow.yaml). Don't hardcode here.
+    # subPath narrows Airflow's dags_folder to dags/ inside the repo. The full
+    # repo root remains accessible at /opt/airflow/dags/repo so DAGs can read
+    # SparkApplication YAMLs from jobs/.
+    subPath: dags
+    period: 30s
+    depth: 1
+    wait: 10
+    sshKeySecret: ""
+  persistence:
+    enabled: false
+
+# Airflow workers/scheduler need a ServiceAccount that's bound to the Spark
+# RBAC Role (platform/rbac/airflow-spark.yaml).
+workers:
+  serviceAccount:
+    create: true
+    name: airflow-worker
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
+scheduler:
+  serviceAccount:
+    create: true
+    name: airflow-scheduler
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
+triggerer:
+  serviceAccount:
+    create: true
+    name: airflow-triggerer
+
+# DAGs reference SparkApplication YAMLs at /opt/airflow/dags/repo/jobs/...
+# The `application_file` argument to SparkKubernetesOperator is read from disk.
+extraEnv: |
+  - name: AIRFLOW__KUBERNETES_EXECUTOR__POD_TEMPLATE_FILE
+    value: ""
+  - name: ICEBERG_REPO_ROOT
+    value: /opt/airflow/dags/repo
+
+# Prometheus scraping — Airflow exposes statsd metrics; the chart can deploy
+# the prometheus-statsd-exporter sidecar.
+statsd:
+  enabled: true
+
+logs:
+  persistence:
+    enabled: true
+    size: 5Gi

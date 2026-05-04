@@ -1,0 +1,25 @@
+{{- if .Values.enabled.nessie }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nessie
+  {{- include "platformApps.appMetadata" . | nindent 2 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: {{ .Values.project }}
+  sources:
+    - repoURL: https://charts.projectnessie.org
+      chart: nessie
+      targetRevision: {{ .Values.versions.nessie }}
+      helm:
+        valueFiles:
+          - $values/platform/nessie/values.yaml
+    - repoURL: {{ .Values.repoURL }}
+      targetRevision: {{ .Values.targetRevision }}
+      ref: values
+  destination:
+    server: {{ .Values.destinationServer }}
+    namespace: {{ .Values.namespaces.platform }}
+  {{- include "platformApps.syncPolicy" . | nindent 2 }}
+{{- end }}

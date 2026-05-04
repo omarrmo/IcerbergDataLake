@@ -1,0 +1,32 @@
+# Apply this ONCE after `bootstrap/install.sh` finishes. Substitute REPO_URL
+# and TARGET_REVISION (the bootstrap script does this with envsubst).
+#
+# This single Application uses platform/apps as a Helm chart. Argo CD then
+# generates one child Application per platform component.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: ${REPO_URL}
+    targetRevision: ${TARGET_REVISION}
+    path: platform/apps
+    helm:
+      releaseName: platform-apps
+      valuesObject:
+        repoURL: ${REPO_URL}
+        targetRevision: ${TARGET_REVISION}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

@@ -1,0 +1,50 @@
+# Nessie Helm chart values. Backs the Iceberg table catalog with Postgres.
+# https://github.com/projectnessie/nessie/tree/main/helm/nessie
+image:
+  repository: ghcr.io/projectnessie/nessie
+  tag: 0.107.5
+
+replicaCount: 1
+
+versionStoreType: JDBC2
+
+# Connection details for the Bitnami Postgres chart (release name: postgres,
+# secret: postgres, key: password). Database/user names match platform/postgres/values.yaml.
+jdbc:
+  jdbcUrl: jdbc:postgresql://postgres-postgresql.mlops.svc.cluster.local:5432/nessie
+  secret:
+    name: postgres-postgresql
+    username: username
+    password: password
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1
+    memory: 1Gi
+
+logLevel: INFO
+
+# Authentication disabled for local dev; in real prod, enable OIDC.
+authentication:
+  enabled: false
+
+# Expose Nessie via Ingress at nessie.localtest.me
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: nessie.localtest.me
+      paths:
+        - path: /
+          pathType: Prefix
+
+# Prometheus scraping (Nessie ships /q/metrics on the management port 9000)
+managementService:
+  portName: management
+serviceMonitor:
+  enabled: true
+  labels:
+    release: kube-prometheus-stack

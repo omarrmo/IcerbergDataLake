@@ -1,0 +1,44 @@
+# RBAC for Airflow workers to launch SparkApplications and follow their status.
+# This is bound to the airflow-worker ServiceAccount that the Airflow Helm
+# chart creates (see platform/airflow/values.yaml: serviceAccount.name).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: airflow-spark
+  namespace: mlops
+rules:
+  - apiGroups: ["sparkoperator.k8s.io"]
+    resources: ["sparkapplications", "scheduledsparkapplications"]
+    verbs: ["create", "get", "list", "watch", "delete", "patch", "update"]
+  - apiGroups: ["sparkoperator.k8s.io"]
+    resources: ["sparkapplications/status"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: airflow-spark
+  namespace: mlops
+subjects:
+  - kind: ServiceAccount
+    name: airflow-worker
+    namespace: mlops
+  - kind: ServiceAccount
+    name: airflow-scheduler
+    namespace: mlops
+  - kind: ServiceAccount
+    name: airflow-triggerer
+    namespace: mlops
+roleRef:
+  kind: Role
+  name: airflow-spark
+  apiGroup: rbac.authorization.k8s.io

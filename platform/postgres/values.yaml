@@ -1,0 +1,42 @@
+# Bitnami PostgreSQL chart values. Hosts the Nessie version-store database.
+# https://github.com/bitnami/charts/tree/main/bitnami/postgresql
+fullnameOverride: postgres
+
+global:
+  postgresql:
+    auth:
+      database: nessie
+      username: nessie
+      # Password from a pre-existing Secret (created by `make secrets` or similar)
+      # if you want to control it explicitly. We let the chart generate one and
+      # publish it as a Secret named "postgres" via existingSecret pattern below.
+
+primary:
+  persistence:
+    enabled: true
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+  initdb:
+    scripts:
+      00-extensions.sql: |
+        CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+auth:
+  database: nessie
+  username: nessie
+  # Chart generates secret `postgres` with key `password` if not set.
+  # We reference this secret from Nessie below.
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring
+    labels:
+      release: kube-prometheus-stack

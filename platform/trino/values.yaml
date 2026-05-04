@@ -1,0 +1,77 @@
+# Trino Helm chart values.
+# https://github.com/trinodb/charts/tree/main/charts/trino
+#
+# Trino reads the same Iceberg tables Spark writes. Catalog talks to Nessie;
+# table data lives in S3 read with the native fs.native-s3.
+
+image:
+  tag: "468"
+
+server:
+  workers: 2
+  config:
+    query:
+      maxMemory: 4GB
+  coordinatorExtraConfig: |
+    http-server.process-forwarded=true
+
+coordinator:
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: 2
+      memory: 4Gi
+
+worker:
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: 2
+      memory: 4Gi
+
+# Inject AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY into coordinator + worker
+# pods so the iceberg.properties below can substitute ${ENV:...}.
+coordinatorEnvFrom:
+  - secretRef:
+      name: aws-creds
+workerEnvFrom:
+  - secretRef:
+      name: aws-creds
+
+# Iceberg catalog backed by Nessie + native S3 filesystem.
+additionalCatalogs:
+  iceberg: |
+    connector.name=iceberg
+    iceberg.catalog.type=nessie
+    iceberg.nessie-catalog.uri=http://nessie.mlops.svc.cluster.local:19120/api/v2
+    iceberg.nessie-catalog.ref=main
+    iceberg.nessie-catalog.default-warehouse-dir=s3://omarrmo-iceberg-datalake-bucket-396510133177-eu-central-1-an/warehouse
+
+    fs.native-s3.enabled=true
+    s3.region=${ENV:AWS_REGION}
+    s3.aws-access-key=${ENV:AWS_ACCESS_KEY_ID}
+    s3.aws-secret-key=${ENV:AWS_SECRET_ACCESS_KEY}
+
+ingress:
+  enabled: true
+  className: nginx
+  host: trino.localtest.me
+  path: /
+  pathType: Prefix
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  hosts:
+    - host: trino.localtest.me
+      paths:
+        - path: /
+          pathType: Prefix
+
+# Prometheus scraping (Trino exposes metrics via JMX exporter; chart toggle).
+serviceMonitor:
+  enabled: true
+  labels:
+    release: kube-prometheus-stack

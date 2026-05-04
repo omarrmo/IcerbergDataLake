@@ -1,0 +1,93 @@
+# kube-prometheus-stack values: Prometheus + Alertmanager + Grafana + node/state
+# exporters. Tuned for laptop-sized resources, with ingress for Grafana.
+# https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack
+fullnameOverride: kps
+
+# Discover ServiceMonitors / PodMonitors from any namespace, regardless of
+# whether they carry the chart's release label.
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    retention: 7d
+    resources:
+      requests:
+        cpu: 200m
+        memory: 1Gi
+      limits:
+        cpu: 1
+        memory: 2Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+grafana:
+  defaultDashboardsTimezone: browser
+  admin:
+    existingSecret: grafana-admin
+    userKey: GRAFANA_ADMIN_USER
+    passwordKey: GRAFANA_ADMIN_PASSWORD
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    # hosts[0] is overridden by the Argo Application helm parameter.
+    hosts:
+      - grafana.localtest.me
+  persistence:
+    enabled: true
+    size: 5Gi
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+    datasources:
+      enabled: true
+      searchNamespace: ALL
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# kube-state-metrics + node-exporter are enabled by default; keep their default
+# resource requests modest.
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+defaultRules:
+  create: true
+  rules:
+    kubeProxy: false  # disabled in some Kind setups

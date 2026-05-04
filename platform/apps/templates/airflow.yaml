@@ -1,0 +1,32 @@
+{{- if .Values.enabled.airflow }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: airflow
+  {{- include "platformApps.appMetadata" . | nindent 2 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  project: {{ .Values.project }}
+  sources:
+    - repoURL: https://airflow.apache.org
+      chart: airflow
+      targetRevision: {{ .Values.versions.airflow }}
+      helm:
+        valueFiles:
+          - $values/platform/airflow/values.yaml
+        parameters:
+          - name: dags.gitSync.repo
+            value: {{ .Values.repoURL }}
+          - name: dags.gitSync.branch
+            value: {{ .Values.targetRevision }}
+          - name: ingress.web.host
+            value: airflow.{{ .Values.ingressDomain }}
+    - repoURL: {{ .Values.repoURL }}
+      targetRevision: {{ .Values.targetRevision }}
+      ref: values
+  destination:
+    server: {{ .Values.destinationServer }}
+    namespace: {{ .Values.namespaces.platform }}
+  {{- include "platformApps.syncPolicy" . | nindent 2 }}
+{{- end }}

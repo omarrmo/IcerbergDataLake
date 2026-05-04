@@ -1,0 +1,36 @@
+# Argo CD bootstrap values. Argo CD then reconciles platform/ via app-of-apps.
+global:
+  domain: argocd.localtest.me
+
+configs:
+  params:
+    # Local cluster - no TLS termination at Argo. Ingress speaks http only.
+    server.insecure: true
+  cm:
+    # Repo URL is overridden when bootstrapping from the local fork.
+    timeout.reconciliation: 30s
+    application.resourceTrackingMethod: annotation
+
+server:
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostname: argocd.localtest.me
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    tls: false
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
+applicationSet:
+  enabled: true
+
+repoServer:
+  replicas: 1
+
+controller:
+  replicas: 1
