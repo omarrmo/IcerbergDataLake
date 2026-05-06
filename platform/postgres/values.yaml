@@ -1,15 +1,33 @@
 # Bitnami PostgreSQL chart values. Hosts the Nessie version-store database.
 # https://github.com/bitnami/charts/tree/main/bitnami/postgresql
+#
+# NOTE: in 2026 Bitnami moved their Docker Hub images to docker.io/bitnamilegacy/*.
+# We override every image used by this chart accordingly. When migrating off
+# Bitnami (e.g. CloudNativePG) drop these overrides.
 fullnameOverride: postgres
+
+image:
+  registry: docker.io
+  repository: bitnamilegacy/postgresql
+  tag: 17.2.0-debian-12-r0
 
 global:
   postgresql:
     auth:
       database: nessie
       username: nessie
-      # Password from a pre-existing Secret (created by `make secrets` or similar)
-      # if you want to control it explicitly. We let the chart generate one and
-      # publish it as a Secret named "postgres" via existingSecret pattern below.
+      existingSecret: postgres-credentials
+      secretKeys:
+        adminPasswordKey: postgres-password
+        userPasswordKey: password
+
+auth:
+  database: nessie
+  username: nessie
+  existingSecret: postgres-credentials
+  secretKeys:
+    adminPasswordKey: postgres-password
+    userPasswordKey: password
 
 primary:
   persistence:
@@ -27,14 +45,19 @@ primary:
       00-extensions.sql: |
         CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-auth:
-  database: nessie
-  username: nessie
-  # Chart generates secret `postgres` with key `password` if not set.
-  # We reference this secret from Nessie below.
+volumePermissions:
+  enabled: false
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/os-shell
+    tag: 12-debian-12-r33
 
 metrics:
   enabled: true
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/postgres-exporter
+    tag: 0.16.0-debian-12-r1
   serviceMonitor:
     enabled: true
     namespace: monitoring

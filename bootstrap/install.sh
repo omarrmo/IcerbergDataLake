@@ -27,6 +27,16 @@ helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
   --values "${SCRIPT_DIR}/ingress-nginx/values.yaml" \
   --wait --timeout 5m
 
+echo "==> Waiting for ingress-nginx controller"
+desired="$(kubectl -n ingress-nginx get ds ingress-nginx-controller -o jsonpath='{.status.desiredNumberScheduled}')"
+if [[ "${desired}" == "0" ]]; then
+  echo "ERROR: ingress-nginx controller DaemonSet has DESIRED=0." >&2
+  echo "       The Kind control-plane node is probably missing label ingress-ready=true." >&2
+  echo "       Recreate the cluster with: make down && make up REPO_URL=<your-repo-url>" >&2
+  exit 1
+fi
+kubectl -n ingress-nginx rollout status ds/ingress-nginx-controller --timeout=5m
+
 echo "==> Installing Argo CD (namespace: argocd)"
 helm upgrade --install argocd argo/argo-cd \
   --namespace argocd --create-namespace \

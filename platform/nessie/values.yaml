@@ -8,12 +8,15 @@ replicaCount: 1
 
 versionStoreType: JDBC2
 
-# Connection details for the Bitnami Postgres chart (release name: postgres,
-# secret: postgres, key: password). Database/user names match platform/postgres/values.yaml.
+# Connection details for the Bitnami Postgres chart. The chart was installed
+# with fullnameOverride=postgres so its primary Service is `postgres`. The
+# username/password are stored in the shared Secret `postgres-credentials`
+# (see platform/db-credentials/secret.yaml) which is referenced by both this
+# chart and the Bitnami postgresql chart's auth.existingSecret.
 jdbc:
-  jdbcUrl: jdbc:postgresql://postgres-postgresql.mlops.svc.cluster.local:5432/nessie
+  jdbcUrl: jdbc:postgresql://postgres.mlops.svc.cluster.local:5432/nessie
   secret:
-    name: postgres-postgresql
+    name: postgres-credentials
     username: username
     password: password
 

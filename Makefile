@@ -29,7 +29,17 @@ help: ## Print this help
 ##@ Cluster lifecycle
 .PHONY: kind-up
 kind-up: ## Create the Kind cluster
-	kind create cluster --name $(KIND_CLUSTER_NAME) --config $(ROOT_DIR)/cluster/kind.yaml || true
+	@if kind get clusters 2>/dev/null | grep -qx "$(KIND_CLUSTER_NAME)"; then \
+	  echo "Kind cluster '$(KIND_CLUSTER_NAME)' already exists."; \
+	  if [ "$$(kubectl get node "$(KIND_CLUSTER_NAME)-control-plane" -o jsonpath='{.metadata.labels.ingress-ready}' 2>/dev/null)" != "true" ]; then \
+	    echo "ERROR: existing cluster was not created with cluster/kind.yaml." >&2; \
+	    echo "       It is missing ingress-ready=true and probably the 80/443 host-port mappings." >&2; \
+	    echo "       Run: make down && make up REPO_URL=$(REPO_URL)" >&2; \
+	    exit 1; \
+	  fi; \
+	else \
+	  kind create cluster --name $(KIND_CLUSTER_NAME) --config $(ROOT_DIR)/cluster/kind.yaml; \
+	fi
 	kubectl cluster-info --context kind-$(KIND_CLUSTER_NAME)
 
 .PHONY: kind-down

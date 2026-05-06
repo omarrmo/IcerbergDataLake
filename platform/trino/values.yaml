@@ -1,4 +1,4 @@
-# Trino Helm chart values.
+# Trino Helm chart values (chart 1.36.0).
 # https://github.com/trinodb/charts/tree/main/charts/trino
 #
 # Trino reads the same Iceberg tables Spark writes. Catalog talks to Nessie;
@@ -11,7 +11,7 @@ server:
   workers: 2
   config:
     query:
-      maxMemory: 4GB
+      maxMemory: "4GB"
   coordinatorExtraConfig: |
     http-server.process-forwarded=true
 
@@ -33,17 +33,16 @@ worker:
       cpu: 2
       memory: 4Gi
 
-# Inject AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY into coordinator + worker
-# pods so the iceberg.properties below can substitute ${ENV:...}.
-coordinatorEnvFrom:
-  - secretRef:
-      name: aws-creds
-workerEnvFrom:
+# Top-level envFrom (chart key, applies to coordinator AND workers). Provides
+# AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_REGION so the iceberg catalog
+# below can resolve ${ENV:...}.
+envFrom:
   - secretRef:
       name: aws-creds
 
-# Iceberg catalog backed by Nessie + native S3 filesystem.
-additionalCatalogs:
+# Iceberg catalog backed by Nessie + native S3 filesystem. The chart's
+# `catalogs:` map (preferred over the deprecated `additionalCatalogs`).
+catalogs:
   iceberg: |
     connector.name=iceberg
     iceberg.catalog.type=nessie
@@ -59,9 +58,6 @@ additionalCatalogs:
 ingress:
   enabled: true
   className: nginx
-  host: trino.localtest.me
-  path: /
-  pathType: Prefix
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
   hosts:
@@ -70,7 +66,7 @@ ingress:
         - path: /
           pathType: Prefix
 
-# Prometheus scraping (Trino exposes metrics via JMX exporter; chart toggle).
+# Prometheus scraping (Trino exposes JMX metrics).
 serviceMonitor:
   enabled: true
   labels:
