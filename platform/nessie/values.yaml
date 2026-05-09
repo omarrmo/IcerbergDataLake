@@ -34,15 +34,17 @@ logLevel: INFO
 authentication:
   enabled: false
 
-# Expose Nessie via Ingress at nessie.localtest.me
+# Expose Nessie via Ingress at nessie.localtest.me. Note the chart schema:
+# `paths` is a list of plain strings, NOT a list of {path, pathType} objects;
+# the path type is configured at the top level of `ingress.pathType`.
 ingress:
   enabled: true
   className: nginx
+  pathType: Prefix
   hosts:
     - host: nessie.localtest.me
       paths:
-        - path: /
-          pathType: Prefix
+        - /
 
 # Prometheus scraping (Nessie ships /q/metrics on the management port 9000)
 managementService:
